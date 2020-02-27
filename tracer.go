@@ -7,7 +7,9 @@
 package tracer
 
 import (
+	stderrors "errors"
 	"fmt"
+	"github.com/pkg/errors"
 	"io"
 )
 
@@ -15,12 +17,12 @@ import (
 type (
 	tracedError struct {
 		error
-		*stack
+		stack error
 	}
 
 	// traceErr is the error struct that contain trace of error.
 	StackTracer interface {
-		StackTrace() StackTrace
+		StackTrace() errors.StackTrace
 	}
 )
 
@@ -31,8 +33,11 @@ func Trace(err error) error {
 		return nil
 	}
 	return &tracedError{
-		err,
-		callers(),
+		error: err,
+
+		// We don't want to give error to the errors
+		//package, just need to its stack.
+		stack: errors.WithStack(stderrors.New("")),
 	}
 }
 
@@ -41,25 +46,30 @@ func (e *tracedError) Cause() error { return e.error }
 // Unwrap provides compatibility for Go 1.13 error chains.
 func (e *tracedError) Unwrap() error { return e.error }
 
-func (w *tracedError) Format(s fmt.State, verb rune) {
+func (e *tracedError) Format(s fmt.State, verb rune) {
 	switch verb {
 	case 'v':
 		if s.Flag('+') {
-			fmt.Fprintf(s, "%+v", w.Cause())
-			w.stack.Format(s, verb)
+			fmt.Fprintf(s, "%+v", e.Cause())
+			seFormatter := e.stack.(fmt.Formatter)
+			seFormatter.Format(s, verb)
 			return
 		}
 		fallthrough
 	case 's':
-		io.WriteString(s, w.Error())
+		io.WriteString(s, e.Error())
 	case 'q':
-		fmt.Fprintf(s, "%q", w.Error())
+		fmt.Fprintf(s, "%q", e.Error())
 	}
+}
+
+func (e *tracedError) StackTrace() errors.StackTrace {
+	return e.stack.(StackTracer).StackTrace()
 }
 
 // Cause function return the base error that cause other errors.
 func Cause(err error) error {
-	if e, ok := err.(tracedError); err != nil && ok {
+	if e, ok := err.(*tracedError); err != nil && ok {
 		return e.Cause()
 	}
 
@@ -67,7 +77,7 @@ func Cause(err error) error {
 }
 
 func MoveStack(from error, to error) error {
-	tErr, ok := from.(tracedError)
+	tErr, ok := from.(*tracedError)
 
 	if from == nil || to == nil || !ok {
 		return Trace(to)
@@ -78,3 +88,5 @@ func MoveStack(from error, to error) error {
 		stack: tErr.stack,
 	}
 }
+
+var _ StackTracer = &tracedError{}
