@@ -32,6 +32,11 @@ func Trace(err error) error {
 	if err == nil {
 		return nil
 	}
+
+	if _,ok:=err.(*tracedError);ok {
+		return err
+	}
+
 	return &tracedError{
 		error: err,
 
