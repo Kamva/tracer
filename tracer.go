@@ -6,6 +6,11 @@
 //
 package tracer
 
+import (
+	"fmt"
+	"io"
+)
+
 // stack represents a stack of program counters.
 type (
 	tracedError struct {
@@ -35,6 +40,22 @@ func (e *tracedError) Cause() error { return e.error }
 
 // Unwrap provides compatibility for Go 1.13 error chains.
 func (e *tracedError) Unwrap() error { return e.error }
+
+func (w *tracedError) Format(s fmt.State, verb rune) {
+	switch verb {
+	case 'v':
+		if s.Flag('+') {
+			fmt.Fprintf(s, "%+v", w.Cause())
+			w.stack.Format(s, verb)
+			return
+		}
+		fallthrough
+	case 's':
+		io.WriteString(s, w.Error())
+	case 'q':
+		fmt.Fprintf(s, "%q", w.Error())
+	}
+}
 
 // Cause function return the base error that cause other errors.
 func Cause(err error) error {
