@@ -6,13 +6,16 @@
 //
 package tracer
 
-import "github.com/pkg/errors"
-
 // stack represents a stack of program counters.
 type (
+	tracedError struct {
+		error
+		*stack
+	}
+
 	// traceErr is the error struct that contain trace of error.
 	StackTracer interface {
-		StackTrace() errors.StackTrace
+		StackTrace() StackTrace
 	}
 )
 
@@ -22,15 +25,35 @@ func Trace(err error) error {
 	if err == nil {
 		return nil
 	}
-
-	if _, ok := err.(StackTracer); ok {
-		return err
+	return &tracedError{
+		err,
+		callers(),
 	}
-
-	return errors.WithStack(err)
 }
+
+func (e *tracedError) Cause() error { return e.error }
+
+// Unwrap provides compatibility for Go 1.13 error chains.
+func (e *tracedError) Unwrap() error { return e.error }
 
 // Cause function return the base error that cause other errors.
 func Cause(err error) error {
-	return errors.Cause(err)
+	if e, ok := err.(tracedError); err != nil && ok {
+		return e.Cause()
+	}
+
+	return err
+}
+
+func MoveStack(from error, to error) error {
+	tErr, ok := from.(tracedError)
+
+	if from == nil || to == nil || !ok {
+		return Trace(to)
+	}
+
+	return &tracedError{
+		error: to,
+		stack: tErr.stack,
+	}
 }
