@@ -33,7 +33,7 @@ func Trace(err error) error {
 		return nil
 	}
 
-	if _,ok:=err.(*tracedError);ok {
+	if _, ok := err.(*tracedError); ok {
 		return err
 	}
 
@@ -46,8 +46,6 @@ func Trace(err error) error {
 	}
 }
 
-func (e *tracedError) Cause() error { return e.error }
-
 // Unwrap provides compatibility for Go 1.13 error chains.
 func (e *tracedError) Unwrap() error { return e.error }
 
@@ -55,30 +53,21 @@ func (e *tracedError) Format(s fmt.State, verb rune) {
 	switch verb {
 	case 'v':
 		if s.Flag('+') {
-			fmt.Fprintf(s, "%+v", e.Cause())
+			_, _ = fmt.Fprintf(s, "%+v", e.Unwrap())
 			seFormatter := e.stack.(fmt.Formatter)
 			seFormatter.Format(s, verb)
 			return
 		}
 		fallthrough
 	case 's':
-		io.WriteString(s, e.Error())
+		_, _ = io.WriteString(s, e.Error())
 	case 'q':
-		fmt.Fprintf(s, "%q", e.Error())
+		_, _ = fmt.Fprintf(s, "%q", e.Error())
 	}
 }
 
 func (e *tracedError) StackTrace() errors.StackTrace {
 	return e.stack.(StackTracer).StackTrace()
-}
-
-// Cause function return the base error that cause other errors.
-func Cause(err error) error {
-	if e, ok := err.(*tracedError); err != nil && ok {
-		return e.Cause()
-	}
-
-	return err
 }
 
 func MoveStack(from error, to error) error {
