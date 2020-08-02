@@ -1,4 +1,4 @@
-module github.com/Kamva/tracer
+module github.com/kamva/tracer
 
 go 1.13
 

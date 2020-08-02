@@ -5,7 +5,7 @@
 
 #### Install
 ```
-go get github.com/Kamva/tracer
+go get github.com/kamva/tracer
 ```
 
 #### Todo:
