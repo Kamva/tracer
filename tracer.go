@@ -71,7 +71,7 @@ func (e *tracedError) StackTrace() errors.StackTrace {
 }
 
 // MoveStack moves stack if the target don't have any stack.
-func MoveStack(from error, to error) error {
+func MoveStackIfNeeded(from error, to error) error {
 	tErr, ok := from.(*tracedError)
 
 	if _, ok := to.(*tracedError); ok {
