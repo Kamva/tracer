@@ -74,12 +74,12 @@ func (e *tracedError) StackTrace() errors.StackTrace {
 func MoveStackIfNeeded(from error, to error) error {
 	tErr, ok := from.(*tracedError)
 
-	if _, ok := to.(*tracedError); ok {
-		return to
-	}
-
 	if from == nil || to == nil || !ok {
 		return Trace(to)
+	}
+
+	if _, ok := to.(*tracedError); ok {
+		return to
 	}
 
 	return &tracedError{
