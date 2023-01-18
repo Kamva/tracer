@@ -1,0 +1,12 @@
+arch:
+  - amd64
+  
+language: go
+go_import_path: github.com/kamva/tracer
+go:
+  - 1.18
+  - 1.17
+  - tip
+
+script:
+  - make check
